@@ -4676,11 +4676,11 @@ var Kraxorax$elm_matrix_a$Matrix$generate = F3(
 						});
 				}));
 	});
-var author$project$Main$Item = F4(
+var author$project$ItemModel$Item = F4(
 	function (x, y, id, alive) {
 		return {alive: alive, id: id, x: x, y: y};
 	});
-var author$project$Main$glider = _List_fromArray(
+var author$project$MatrixUtils$glider = _List_fromArray(
 	[
 		_List_fromArray(
 		[18, 22]),
@@ -4769,7 +4769,7 @@ var elm$core$List$isEmpty = function (xs) {
 		return false;
 	}
 };
-var author$project$Main$isPrepopulated = F3(
+var author$project$MatrixUtils$isPrepopulated = F3(
 	function (itemX, itemY, figure) {
 		return !elm$core$List$isEmpty(
 			A2(
@@ -4792,17 +4792,15 @@ var elm$core$Maybe$Just = function (a) {
 };
 var elm$core$Maybe$Nothing = {$: 'Nothing'};
 var elm$core$String$fromInt = _String_fromNumber;
-var author$project$Main$fieldMatrix = A3(
+var author$project$MatrixUtils$fieldMatrix = A3(
 	Kraxorax$elm_matrix_a$Matrix$generate,
 	50,
 	50,
 	F2(
 		function (x, y) {
-			var id = _Utils_ap(
-				elm$core$String$fromInt(x),
-				elm$core$String$fromInt(y));
-			var alive = A3(author$project$Main$isPrepopulated, x, y, author$project$Main$glider);
-			return A4(author$project$Main$Item, x, y, id, alive);
+			var id = elm$core$String$fromInt(x) + ('-' + elm$core$String$fromInt(y));
+			var alive = A3(author$project$MatrixUtils$isPrepopulated, x, y, author$project$MatrixUtils$glider);
+			return A4(author$project$ItemModel$Item, x, y, id, alive);
 		}));
 var elm$core$Result$isOk = function (result) {
 	if (result.$ === 'Ok') {
@@ -5023,7 +5021,7 @@ var elm$core$Platform$Cmd$batch = _Platform_batch;
 var elm$core$Platform$Cmd$none = elm$core$Platform$Cmd$batch(_List_Nil);
 var author$project$Main$init = function (_n0) {
 	return _Utils_Tuple2(
-		{generation: author$project$Main$fieldMatrix, isTicking: false},
+		{generation: author$project$MatrixUtils$fieldMatrix, isTicking: false},
 		elm$core$Platform$Cmd$none);
 };
 var author$project$Main$Tick = function (a) {
@@ -6193,11 +6191,11 @@ var Kraxorax$elm_matrix_a$Neighbours$neighbours = function (mt) {
 			return Kraxorax$elm_matrix_a$Neighbours$neighboursOnHorizontalStrip;
 	}
 };
-var author$project$Main$itemNeighbours = F2(
+var author$project$MatrixUtils$itemNeighbours = F2(
 	function (matrix, item) {
 		return A4(Kraxorax$elm_matrix_a$Neighbours$neighbours, Kraxorax$elm_matrix_a$Neighbours$Plane, item.x, item.y, matrix);
 	});
-var author$project$Main$liveNeighboursCount = F2(
+var author$project$MatrixUtils$liveNeighboursCount = F2(
 	function (matrix, item) {
 		return elm$core$List$length(
 			A2(
@@ -6207,11 +6205,11 @@ var author$project$Main$liveNeighboursCount = F2(
 					return alive;
 				},
 				elm$core$Array$toList(
-					A2(author$project$Main$itemNeighbours, matrix, item))));
+					A2(author$project$MatrixUtils$itemNeighbours, matrix, item))));
 	});
-var author$project$Main$isAlive = F2(
+var author$project$MatrixUtils$isAlive = F2(
 	function (matrix, item) {
-		var count = A2(author$project$Main$liveNeighboursCount, matrix, item);
+		var count = A2(author$project$MatrixUtils$liveNeighboursCount, matrix, item);
 		var _n0 = item.alive;
 		if (_n0) {
 			switch (count) {
@@ -6239,7 +6237,7 @@ var author$project$Main$toggleLife = F2(
 		return _Utils_update(
 			item,
 			{
-				alive: A2(author$project$Main$isAlive, matrix, item)
+				alive: A2(author$project$MatrixUtils$isAlive, matrix, item)
 			});
 	});
 var author$project$Main$update = F2(
@@ -6280,14 +6278,7 @@ var Kraxorax$elm_matrix_a$Matrix$toArray = function (_n0) {
 	var m = _n0.b;
 	return A3(elm$core$Array$foldr, elm$core$Array$append, elm$core$Array$empty, m);
 };
-var author$project$Main$ToggleTicking = {$: 'ToggleTicking'};
-var author$project$Main$ClickEvent = function (a) {
-	return {$: 'ClickEvent', a: a};
-};
-var author$project$Main$cellSize = 15;
-var elm$virtual_dom$VirtualDom$Normal = function (a) {
-	return {$: 'Normal', a: a};
-};
+var author$project$Cell$cellSize = 15;
 var elm$json$Json$Decode$map = _Json_map1;
 var elm$json$Json$Decode$map2 = _Json_map2;
 var elm$json$Json$Decode$succeed = _Json_succeed;
@@ -6303,20 +6294,6 @@ var elm$virtual_dom$VirtualDom$toHandlerInt = function (handler) {
 			return 3;
 	}
 };
-var elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
-var elm$html$Html$Events$on = F2(
-	function (event, decoder) {
-		return A2(
-			elm$virtual_dom$VirtualDom$on,
-			event,
-			elm$virtual_dom$VirtualDom$Normal(decoder));
-	});
-var elm$html$Html$Events$onClick = function (msg) {
-	return A2(
-		elm$html$Html$Events$on,
-		'click',
-		elm$json$Json$Decode$succeed(msg));
-};
 var elm$svg$Svg$trustedNode = _VirtualDom_nodeNS('http://www.w3.org/2000/svg');
 var elm$svg$Svg$rect = elm$svg$Svg$trustedNode('rect');
 var elm$svg$Svg$Attributes$fill = _VirtualDom_attribute('fill');
@@ -6325,25 +6302,62 @@ var elm$svg$Svg$Attributes$stroke = _VirtualDom_attribute('stroke');
 var elm$svg$Svg$Attributes$width = _VirtualDom_attribute('width');
 var elm$svg$Svg$Attributes$x = _VirtualDom_attribute('x');
 var elm$svg$Svg$Attributes$y = _VirtualDom_attribute('y');
-var author$project$Main$cell = function (item) {
-	var yString = elm$core$String$fromInt(item.y * author$project$Main$cellSize);
-	var xString = elm$core$String$fromInt(item.x * author$project$Main$cellSize);
-	var fillColor = item.alive ? 'green' : 'white';
-	var cellSizeString = elm$core$String$fromInt(author$project$Main$cellSize);
+var elm$virtual_dom$VirtualDom$Normal = function (a) {
+	return {$: 'Normal', a: a};
+};
+var elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
+var elm$html$Html$Events$on = F2(
+	function (event, decoder) {
+		return A2(
+			elm$virtual_dom$VirtualDom$on,
+			event,
+			elm$virtual_dom$VirtualDom$Normal(decoder));
+	});
+var elm$svg$Svg$Events$onClick = function (msg) {
 	return A2(
-		elm$svg$Svg$rect,
-		_List_fromArray(
-			[
-				elm$svg$Svg$Attributes$x(xString),
-				elm$svg$Svg$Attributes$y(yString),
-				elm$svg$Svg$Attributes$width(cellSizeString),
-				elm$svg$Svg$Attributes$height(cellSizeString),
-				elm$svg$Svg$Attributes$fill(fillColor),
-				elm$svg$Svg$Attributes$stroke('black'),
-				elm$html$Html$Events$onClick(
-				author$project$Main$ClickEvent(item.id))
-			]),
-		_List_Nil);
+		elm$html$Html$Events$on,
+		'click',
+		elm$json$Json$Decode$succeed(msg));
+};
+var author$project$Cell$cell = F2(
+	function (item, onClickHanlder) {
+		var yString = elm$core$String$fromInt(item.y * author$project$Cell$cellSize);
+		var xString = elm$core$String$fromInt(item.x * author$project$Cell$cellSize);
+		var fillColor = item.alive ? 'green' : 'white';
+		var cellSizeString = elm$core$String$fromInt(author$project$Cell$cellSize);
+		return A2(
+			elm$svg$Svg$rect,
+			_List_fromArray(
+				[
+					elm$svg$Svg$Attributes$x(xString),
+					elm$svg$Svg$Attributes$y(yString),
+					elm$svg$Svg$Attributes$width(cellSizeString),
+					elm$svg$Svg$Attributes$height(cellSizeString),
+					elm$svg$Svg$Attributes$fill(fillColor),
+					elm$svg$Svg$Attributes$stroke('black'),
+					elm$svg$Svg$Events$onClick(onClickHanlder)
+				]),
+			_List_Nil);
+	});
+var author$project$Cell$buildCellList = F2(
+	function (generation, onClickHanlder) {
+		return A2(
+			elm$core$List$map,
+			function (item) {
+				return A2(
+					author$project$Cell$cell,
+					item,
+					onClickHanlder(item.id));
+			},
+			elm$core$Array$toList(
+				Kraxorax$elm_matrix_a$Matrix$toArray(generation)));
+	});
+var author$project$Main$ClickEvent = function (a) {
+	return {$: 'ClickEvent', a: a};
+};
+var author$project$Main$ToggleTicking = {$: 'ToggleTicking'};
+var author$project$Main$buttonText = function (isTicking) {
+	return isTicking ? 'Stop Game' : 'Start Game';
 };
 var author$project$Main$viewBoxParams = '0 0 1000 1000';
 var elm$html$Html$button = _VirtualDom_node('button');
@@ -6352,10 +6366,17 @@ var elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
 var elm$html$Html$text = elm$virtual_dom$VirtualDom$text;
 var elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
 var elm$html$Html$Attributes$style = elm$virtual_dom$VirtualDom$style;
+var elm$html$Html$Events$onClick = function (msg) {
+	return A2(
+		elm$html$Html$Events$on,
+		'click',
+		elm$json$Json$Decode$succeed(msg));
+};
 var elm$svg$Svg$svg = elm$svg$Svg$trustedNode('svg');
 var elm$svg$Svg$Attributes$viewBox = _VirtualDom_attribute('viewBox');
 var author$project$Main$view = function (_n0) {
 	var generation = _n0.generation;
+	var isTicking = _n0.isTicking;
 	return A2(
 		elm$html$Html$div,
 		_List_Nil,
@@ -6370,7 +6391,8 @@ var author$project$Main$view = function (_n0) {
 					]),
 				_List_fromArray(
 					[
-						elm$html$Html$text('Toggle Tick')
+						elm$html$Html$text(
+						author$project$Main$buttonText(isTicking))
 					])),
 				A2(
 				elm$svg$Svg$svg,
@@ -6378,11 +6400,7 @@ var author$project$Main$view = function (_n0) {
 					[
 						elm$svg$Svg$Attributes$viewBox(author$project$Main$viewBoxParams)
 					]),
-				A2(
-					elm$core$List$map,
-					author$project$Main$cell,
-					elm$core$Array$toList(
-						Kraxorax$elm_matrix_a$Matrix$toArray(generation))))
+				A2(author$project$Cell$buildCellList, generation, author$project$Main$ClickEvent))
 			]));
 };
 var elm$browser$Browser$External = function (a) {
