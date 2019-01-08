@@ -1,32 +1,43 @@
 module Main exposing (Model)
 
 import Browser
+import Array exposing (fromList)
 import Html exposing (Html, button, div, option, select, text)
 import Html.Attributes exposing (style, value)
 import Html.Events exposing (onClick, onInput)
 import Matrix exposing (Matrix)
 import Svg exposing (svg)
-import Svg.Attributes exposing (viewBox)
+import Svg.Attributes exposing (viewBox, height, width)
 import Time
+import Random
 
-import Cell exposing (buildCellList)
-import ItemModel exposing (Item)
-import MatrixUtils exposing (fieldMatrix, isAlive)
+import CellUtils exposing (cellList)
+import Types exposing (Cell)
+import Msgs exposing (Msg(..))
+import MatrixUtils exposing (fieldMatrix, randomFieldMatrix, isAlive)
 
+
+viewBoxSize : String
+viewBoxSize =
+    "800"
+
+
+viewBoxParams : String
 viewBoxParams =
-    "0 0 750 750"
+    "0 0 800 800"
+
+
+tickRate : Float
+tickRate =
+    140
 
 
 type alias Model =
-    { generation : Matrix Item, isTicking : Bool }
-
-
-type Msg
-    = ClickEvent String
-    | Tick Time.Posix
-    | ToggleTicking
-    | ChangeSelect String
-
+    {
+        generation : Matrix Cell,
+        selectedPattern : String,
+        isTicking : Bool
+    }
 
 main =
     Browser.element
@@ -40,6 +51,7 @@ main =
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( { generation = fieldMatrix "glider"
+      , selectedPattern = "glider"
       , isTicking = False
       }
     , Cmd.none
@@ -64,51 +76,78 @@ update msg model =
             , Cmd.none
             )
 
-        ChangeSelect patternName ->
-            ( { model | isTicking = False, generation = fieldMatrix patternName }
-            , Cmd.none
+        ChangePattern "random" ->
+            (
+                model
+            ,
+                Random.weighted (20, True) [ (80, False) ]
+                    |> Random.list 2500
+                    |> Random.generate RandomField
             )
 
+        ChangePattern patternName ->
+            ( {
+                model | isTicking = False,
+                selectedPattern = patternName,
+                generation = fieldMatrix patternName
+            },
+            Cmd.none
+            )
+
+        RandomField seed ->
+            ( {
+                model | isTicking = False,
+                selectedPattern = "random",
+                generation = seed |> Array.fromList |> randomFieldMatrix
+            },
+            Cmd.none
+            )
 
 view : Model -> Html Msg
-view { generation, isTicking } =
+view { generation, isTicking, selectedPattern } =
     div []
         [ button
             [ style "margin" "10px"
             , onClick ToggleTicking
             ]
             [ isTicking |> buttonText |> text ]
-        , select [ onInput ChangeSelect ]
+        , select [ onInput ChangePattern ]
             [ option [ value "glider" ] [ text "Glider" ]
             , option [ value "blinkers" ] [ text "Blinker" ]
+            , option [ value "random" ] [ text "Random" ]
             ]
+        , button
+            [ style "margin" "10px"
+            , onClick (ChangePattern selectedPattern)
+            ]
+            [ text "Reset" ]
         , svg
-            [ viewBox viewBoxParams ]
-            (buildCellList generation ClickEvent)
+            [ width viewBoxSize, height viewBoxSize, viewBox viewBoxParams ]
+            (cellList generation (\id -> ClickEvent id))
         ]
 
 
 subscriptions : Model -> Sub Msg
 subscriptions { isTicking } =
     if isTicking then
-        Time.every 140 Tick
+        Time.every tickRate Tick
 
     else
         Sub.none
 
 
-toggle : String -> Item -> Item
-toggle id item =
-    if item.id == id then
-        { item | alive = not item.alive }
+toggle : String -> Cell -> Cell
+toggle id cell =
+    if cell.id == id then
+        { cell | alive = not cell.alive }
 
     else
-        item
+        cell
 
 
-toggleLife : Matrix Item -> Item -> Item
-toggleLife matrix item =
-    { item | alive = isAlive matrix item }
+toggleLife : Matrix Cell -> Cell -> Cell
+toggleLife matrix cell =
+    { cell | alive = isAlive matrix cell }
 
 
 buttonText : Bool -> String
