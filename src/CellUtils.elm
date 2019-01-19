@@ -1,6 +1,6 @@
 module CellUtils exposing (cellList)
 
-import Array exposing (fromList)
+import Array exposing (Array)
 import Matrix exposing (Matrix)
 import Svg exposing (Svg, rect)
 import Svg.Attributes exposing (fill, height, stroke, width, x, y)
@@ -25,22 +25,23 @@ rectPosition value =
 
 fillColor : Bool -> String
 fillColor alive =
-    if alive then
-        "green"
+    case alive of
+        True ->
+            "#5c8d89"
 
-    else
-        "white"
+        False ->
+            "#f9f8eb"
 
 
 cellRect : Cell -> (String -> msg) -> Svg msg
 cellRect { posX, posY, alive, id } onClickHanlder =
     rect
-        [ rectPosition posX |> x
-        , rectPosition posY |> y
+        [ posX |> rectPosition  |> x
+        , posY |> rectPosition  |> y
         , width cellSizeString
         , height cellSizeString
         , alive |> fillColor |> fill
-        , stroke "black"
+        , stroke "gainsboro"
         , onClick (onClickHanlder id)
         ]
         []
@@ -49,5 +50,5 @@ cellList : Matrix Cell -> (String -> Msg) -> List(Svg Msg)
 cellList generation onClickHanlder =
     generation
         |> Matrix.toArray
+        |> Array.map (\item -> cellRect item onClickHanlder)
         |> Array.toList
-        |> List.map (\item -> cellRect item onClickHanlder)

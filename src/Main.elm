@@ -1,20 +1,21 @@
 module Main exposing (Model)
 
+import Array exposing (Array)
 import Browser
-import Array exposing (fromList)
 import Html exposing (Html, button, div, option, select, text)
 import Html.Attributes exposing (style, value)
 import Html.Events exposing (onClick, onInput)
+import List.Extra exposing (uniqueBy)
 import Matrix exposing (Matrix)
-import Svg exposing (svg)
-import Svg.Attributes exposing (viewBox, height, width)
-import Time
 import Random
+import Svg exposing (svg)
+import Svg.Attributes exposing (height, viewBox, width)
+import Time
 
 import CellUtils exposing (cellList)
-import Types exposing (Cell)
+import MatrixUtils exposing (cellNeighbours, fieldMatrix, isAlive, getAliveCells, randomFieldMatrix, detectFate)
 import Msgs exposing (Msg(..))
-import MatrixUtils exposing (fieldMatrix, randomFieldMatrix, isAlive)
+import Types exposing (Cell)
 
 
 viewBoxSize : String
@@ -29,15 +30,16 @@ viewBoxParams =
 
 tickRate : Float
 tickRate =
-    140
+    100
 
 
 type alias Model =
-    {
-        generation : Matrix Cell,
-        selectedPattern : String,
-        isTicking : Bool
+    { generation : Matrix Cell
+    , selectedPattern : String
+    , isTicking : Bool
+    , aliveCells : List Cell
     }
+
 
 main =
     Browser.element
@@ -50,9 +52,13 @@ main =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
+    let
+        glider = fieldMatrix "glider"
+    in
     ( { generation = fieldMatrix "glider"
       , selectedPattern = "glider"
       , isTicking = False
+      , aliveCells = getAliveCells glider
       }
     , Cmd.none
     )
@@ -62,7 +68,15 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Tick _ ->
-            ( { model | generation = Matrix.map (toggleLife model.generation) model.generation }
+            let
+                live = fetchLiveCells model
+                (newGeneration, newLiveCells) = buildNewGeneration model.generation live
+                isTicking = List.length live > 0
+            in
+            ( { model | generation = newGeneration
+            , aliveCells = newLiveCells
+            , isTicking = isTicking
+            }
             , Cmd.none
             )
 
@@ -77,31 +91,32 @@ update msg model =
             )
 
         ChangePattern "random" ->
-            (
-                model
-            ,
-                Random.weighted (20, True) [ (80, False) ]
-                    |> Random.list 2500
-                    |> Random.generate RandomField
+            ( model
+            , Random.weighted ( 20, True ) [ ( 80, False ) ]
+                |> Random.list 2500
+                |> Random.generate RandomField
             )
 
         ChangePattern patternName ->
-            ( {
-                model | isTicking = False,
-                selectedPattern = patternName,
-                generation = fieldMatrix patternName
-            },
-            Cmd.none
+            ( { model
+                | isTicking = False
+                , selectedPattern = patternName
+                , aliveCells = []
+                , generation = fieldMatrix patternName
+              }
+            , Cmd.none
             )
 
         RandomField seed ->
-            ( {
-                model | isTicking = False,
-                selectedPattern = "random",
-                generation = seed |> Array.fromList |> randomFieldMatrix
-            },
-            Cmd.none
+            ( { model
+                | isTicking = False
+                , selectedPattern = "random"
+                , aliveCells = []
+                , generation = seed |> Array.fromList |> randomFieldMatrix
+              }
+            , Cmd.none
             )
+
 
 view : Model -> Html Msg
 view { generation, isTicking, selectedPattern } =
@@ -129,12 +144,41 @@ view { generation, isTicking, selectedPattern } =
 
 subscriptions : Model -> Sub Msg
 subscriptions { isTicking } =
-    if isTicking then
-        Time.every tickRate Tick
+    case isTicking of
+        True -> Time.every tickRate Tick
+        False -> Sub.none
 
-    else
-        Sub.none
 
+
+fetchLiveCells : Model -> List Cell
+fetchLiveCells { aliveCells, generation } =
+    case aliveCells of
+        [] -> getAliveCells generation
+        _ -> aliveCells
+
+
+
+buildNewGeneration : Matrix Cell -> List Cell -> ( Matrix Cell, List Cell )
+buildNewGeneration generation live =
+    List.map (cellNeighbours generation) live
+        |> List.concat
+        |> List.append live
+        |> uniqueBy .id
+        |> List.foldl
+            (\cell ( resultGen, resultAlives ) ->
+                let
+                    fate =
+                        detectFate generation cell
+
+                    newLiveList =
+                        if fate.alive then fate :: resultAlives else resultAlives
+
+                    newGeneration =
+                        Matrix.set cell.posX cell.posY fate resultGen
+                in
+                ( newGeneration, newLiveList )
+            )
+            ( generation, [] )
 
 toggle : String -> Cell -> Cell
 toggle id cell =
@@ -143,11 +187,6 @@ toggle id cell =
 
     else
         cell
-
-
-toggleLife : Matrix Cell -> Cell -> Cell
-toggleLife matrix cell =
-    { cell | alive = isAlive matrix cell }
 
 
 buttonText : Bool -> String
