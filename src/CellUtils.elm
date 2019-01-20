@@ -2,16 +2,17 @@ module CellUtils exposing (cellList)
 
 import Array exposing (Array)
 import Matrix exposing (Matrix)
+import Msgs exposing (Msg(..))
 import Svg exposing (Svg, rect)
 import Svg.Attributes exposing (fill, height, stroke, width, x, y)
 import Svg.Events exposing (onClick)
 import Types exposing (Cell)
-import Msgs exposing (Msg(..))
 
 
 cellSize : Int
 cellSize =
     15
+
 
 cellSizeString : String
 cellSizeString =
@@ -36,8 +37,8 @@ fillColor alive =
 cellRect : Cell -> (String -> msg) -> Svg msg
 cellRect { posX, posY, alive, id } onClickHanlder =
     rect
-        [ posX |> rectPosition  |> x
-        , posY |> rectPosition  |> y
+        [ posX |> rectPosition |> x
+        , posY |> rectPosition |> y
         , width cellSizeString
         , height cellSizeString
         , alive |> fillColor |> fill
@@ -46,7 +47,8 @@ cellRect { posX, posY, alive, id } onClickHanlder =
         ]
         []
 
-cellList : Matrix Cell -> (String -> Msg) -> List(Svg Msg)
+
+cellList : Matrix Cell -> (String -> Msg) -> List (Svg Msg)
 cellList generation onClickHanlder =
     generation
         |> Matrix.toArray
