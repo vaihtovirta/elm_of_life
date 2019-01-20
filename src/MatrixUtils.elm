@@ -61,7 +61,8 @@ fieldMatrix patternName =
 
 randomFieldMatrix : Array Bool -> Matrix Cell
 randomFieldMatrix seed =
-    Matrix.generate sideSize sideSize
+    Matrix.generate sideSize
+        sideSize
         (\x y -> Cell x y (cellId x y) False)
         |> Matrix.indexedMap
             (\x y cell ->
