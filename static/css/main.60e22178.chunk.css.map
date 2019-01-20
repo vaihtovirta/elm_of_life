@@ -1,0 +1,1 @@
+{"version":3,"sources":["main.css"],"names":[],"mappings":"AAAA,OACE,eAAiB,CAGnB,gBACE,WACA,eACA,WAAa,C","file":"static/css/main.60e22178.chunk.css","sourcesContent":[".field {\n  margin-top: 20px;\n}\n\n.pattern-select {\n  width: 100%;\n  margin-top: 8px;\n  height: 45px;\n}\n"],"sourceRoot":""}
