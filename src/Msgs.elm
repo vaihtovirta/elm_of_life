@@ -4,8 +4,8 @@ import Time
 
 
 type Msg
-    = ClickEvent String
+    = ClickCell String
     | Tick Time.Posix
     | ToggleTicking
-    | ChangePattern String
+    | SelectPattern String
     | RandomField (List Bool)

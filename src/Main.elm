@@ -35,9 +35,14 @@ tickRate =
 type alias Model =
     { generation : Matrix Cell
     , selectedPattern : String
-    , isTicking : Bool
+    , gameStatus : GameStatus
     , aliveCells : List Cell
     }
+
+
+type GameStatus
+    = Ticking
+    | Paused
 
 
 main =
@@ -57,7 +62,7 @@ init _ =
     in
     ( { generation = fieldMatrix "glider"
       , selectedPattern = "glider"
-      , isTicking = False
+      , gameStatus = Paused
       , aliveCells = getAliveCells glider
       }
     , Cmd.none
@@ -68,71 +73,26 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Tick _ ->
-            let
-                live =
-                    fetchLiveCells model
+            handleTick model
 
-                ( newGeneration, newLiveCells ) =
-                    buildNewGeneration model.generation live
-
-                isTicking =
-                    List.length live > 0
-            in
-            ( { model
-                | generation = newGeneration
-                , aliveCells = newLiveCells
-                , isTicking = isTicking
-              }
-            , Cmd.none
-            )
-
-        ClickEvent id ->
-            let
-                newGeneration =
-                    Matrix.map (toggle id) model.generation
-
-                newAliveCells =
-                    getAliveCells newGeneration
-            in
-            ( { model | generation = newGeneration, aliveCells = newAliveCells }
-            , Cmd.none
-            )
+        ClickCell id ->
+            handleClick model id
 
         ToggleTicking ->
-            ( { model | isTicking = not model.isTicking }
-            , Cmd.none
-            )
+            handleTicking model
 
-        ChangePattern "random" ->
-            ( model
-            , Random.weighted ( 20, True ) [ ( 80, False ) ]
-                |> Random.list 2500
-                |> Random.generate RandomField
-            )
+        SelectPattern "random" ->
+            handleSelectRandomPattern model
 
-        ChangePattern patternName ->
-            ( { model
-                | isTicking = False
-                , selectedPattern = patternName
-                , aliveCells = []
-                , generation = fieldMatrix patternName
-              }
-            , Cmd.none
-            )
+        SelectPattern patternName ->
+            handleSelectPattern model patternName
 
         RandomField seed ->
-            ( { model
-                | isTicking = False
-                , selectedPattern = "random"
-                , aliveCells = []
-                , generation = seed |> Array.fromList |> randomFieldMatrix
-              }
-            , Cmd.none
-            )
+            handleRandomSeed model seed
 
 
 view : Model -> Html Msg
-view { generation, isTicking, selectedPattern } =
+view { generation, gameStatus, selectedPattern } =
     div [ class "container" ]
         [ div [ class "row" ]
             [ div [ class "col-sm-offset-4" ]
@@ -145,7 +105,7 @@ view { generation, isTicking, selectedPattern } =
             [ div [ class "col-sm-offset-4 field" ]
                 [ svg
                     [ width viewBoxSize, height viewBoxSize, viewBox viewBoxParams ]
-                    (cellList generation (\id -> ClickEvent id))
+                    (cellList generation (\id -> ClickCell id))
                 ]
             ]
         , div [ class "row" ]
@@ -153,10 +113,10 @@ view { generation, isTicking, selectedPattern } =
                 [ button
                     [ onClick ToggleTicking
                     ]
-                    [ isTicking |> buttonText |> text ]
+                    [ gameStatus |> buttonText |> text ]
                 ]
             , div [ class "col-sm-1" ]
-                [ select [ class "pattern-select", onInput ChangePattern ]
+                [ select [ class "pattern-select", onInput SelectPattern ]
                     [ option [ value "glider" ] [ text "Glider" ]
                     , option [ value "blinkers" ] [ text "Blinker" ]
                     , option [ value "random" ] [ text "Random" ]
@@ -165,7 +125,7 @@ view { generation, isTicking, selectedPattern } =
             , div [ class "col-sm-1" ]
                 [ button
                     [ class "secondary"
-                    , onClick (ChangePattern selectedPattern)
+                    , onClick (SelectPattern selectedPattern)
                     ]
                     [ text "Reset" ]
                 ]
@@ -174,13 +134,13 @@ view { generation, isTicking, selectedPattern } =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions { isTicking } =
-    case isTicking of
-        True ->
-            Time.every tickRate Tick
-
-        False ->
+subscriptions { gameStatus } =
+    case gameStatus of
+        Paused ->
             Sub.none
+
+        Ticking ->
+            Time.every tickRate Tick
 
 
 fetchLiveCells : Model -> List Cell
@@ -193,8 +153,8 @@ fetchLiveCells { aliveCells, generation } =
             aliveCells
 
 
-buildNewGeneration : Matrix Cell -> List Cell -> ( Matrix Cell, List Cell )
-buildNewGeneration generation live =
+evolve : Matrix Cell -> List Cell -> ( Matrix Cell, List Cell )
+evolve generation live =
     List.map (cellNeighbours generation) live
         |> List.concat
         |> List.append live
@@ -229,10 +189,104 @@ toggle id cell =
         cell
 
 
-buttonText : Bool -> String
-buttonText isTicking =
-    if isTicking then
-        "Stop Game"
+buttonText : GameStatus -> String
+buttonText gameStatus =
+    case gameStatus of
+        Paused ->
+            "Start Game"
 
-    else
-        "Start Game"
+        Ticking ->
+            "Stop Game"
+
+
+
+-- Message handlers
+
+
+handleTick : Model -> ( Model, Cmd Msg )
+handleTick model =
+    let
+        live =
+            fetchLiveCells model
+
+        ( newGeneration, newLiveCells ) =
+            evolve model.generation live
+
+        gameStatus =
+            case live of
+                [] ->
+                    Paused
+
+                _ ->
+                    Ticking
+    in
+    ( { model
+        | generation = newGeneration
+        , aliveCells = newLiveCells
+        , gameStatus = gameStatus
+      }
+    , Cmd.none
+    )
+
+
+handleClick : Model -> String -> ( Model, Cmd Msg )
+handleClick model id =
+    let
+        newGeneration =
+            Matrix.map (toggle id) model.generation
+
+        newAliveCells =
+            getAliveCells newGeneration
+    in
+    ( { model | generation = newGeneration, aliveCells = newAliveCells }
+    , Cmd.none
+    )
+
+
+handleTicking : Model -> ( Model, Cmd Msg )
+handleTicking model =
+    let
+        gameStatus =
+            case model.gameStatus of
+                Paused ->
+                    Ticking
+
+                Ticking ->
+                    Paused
+    in
+    ( { model | gameStatus = gameStatus }
+    , Cmd.none
+    )
+
+
+handleSelectPattern : Model -> String -> ( Model, Cmd Msg )
+handleSelectPattern model patternName =
+    ( { model
+        | gameStatus = Paused
+        , selectedPattern = patternName
+        , aliveCells = []
+        , generation = fieldMatrix patternName
+      }
+    , Cmd.none
+    )
+
+
+handleSelectRandomPattern : Model -> ( Model, Cmd Msg )
+handleSelectRandomPattern model =
+    ( model
+    , Random.weighted ( 20, True ) [ ( 80, False ) ]
+        |> Random.list 2500
+        |> Random.generate RandomField
+    )
+
+
+handleRandomSeed : Model -> List Bool -> ( Model, Cmd Msg )
+handleRandomSeed model seed =
+    ( { model
+        | gameStatus = Paused
+        , selectedPattern = "random"
+        , aliveCells = []
+        , generation = seed |> Array.fromList |> randomFieldMatrix
+      }
+    , Cmd.none
+    )
