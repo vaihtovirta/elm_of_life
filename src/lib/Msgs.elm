@@ -5,7 +5,8 @@ import Time
 
 type Msg
     = ClickCell String
+    | RandomField (List Bool)
+    | SelectPattern String
+    | SelectSpeed String
     | Tick Time.Posix
     | ToggleTicking
-    | SelectPattern String
-    | RandomField (List Bool)
