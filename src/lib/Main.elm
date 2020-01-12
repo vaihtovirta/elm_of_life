@@ -6,16 +6,14 @@ import CellUtils exposing (cellList)
 import Html exposing (Html, a, button, div, h1, option, select, text)
 import Html.Attributes exposing (class, href, style, value)
 import Html.Events exposing (onClick, onInput)
+import Html.Lazy exposing (lazy)
 import List.Extra exposing (uniqueBy)
 import Matrix exposing (Matrix)
 import MatrixUtils exposing (cellNeighbours, detectFate, fieldMatrix, getAliveCells, isAlive, randomFieldMatrix)
 import Msgs exposing (Msg(..))
 import Random
-import Svg exposing (svg)
-import Svg.Attributes exposing (height, viewBox, width)
 import Time
 import Types exposing (Cell)
-
 
 viewBoxSize : String
 viewBoxSize =
@@ -27,16 +25,12 @@ viewBoxParams =
     "0 0 800 800"
 
 
-tickRate : Float
-tickRate =
-    100
-
-
 type alias Model =
     { generation : Matrix Cell
     , selectedPattern : String
     , gameStatus : GameStatus
     , aliveCells : List Cell
+    , speed : Float
     }
 
 
@@ -64,6 +58,7 @@ init _ =
       , selectedPattern = "glider"
       , gameStatus = Paused
       , aliveCells = getAliveCells glider
+      , speed = 100
       }
     , Cmd.none
     )
@@ -90,6 +85,9 @@ update msg model =
         RandomField seed ->
             handleRandomSeed model seed
 
+        SelectSpeed speed ->
+            handleSelectSpeed model speed
+
 
 view : Model -> Html Msg
 view { generation, gameStatus, selectedPattern } =
@@ -103,10 +101,7 @@ view { generation, gameStatus, selectedPattern } =
             ]
         , div [ class "row" ]
             [ div [ class "col-sm-offset-4 field" ]
-                [ svg
-                    [ width viewBoxSize, height viewBoxSize, viewBox viewBoxParams ]
-                    (cellList generation (\id -> ClickCell id))
-                ]
+                [ lazy viewCells generation ]
             ]
         , div [ class "row" ]
             [ div [ class "col-sm-offset-4" ]
@@ -123,6 +118,13 @@ view { generation, gameStatus, selectedPattern } =
                     ]
                 ]
             , div [ class "col-sm-1" ]
+                [ select [ class "pattern-select", onInput SelectSpeed ]
+                    [ option [ value "slow" ] [ text "Slow" ]
+                    , option [ value "normal" ] [ text "Normal" ]
+                    , option [ value "fast" ] [ text "Fast" ]
+                    ]
+                ]
+            , div [ class "col-sm-1" ]
                 [ button
                     [ class "secondary"
                     , onClick (SelectPattern selectedPattern)
@@ -134,13 +136,13 @@ view { generation, gameStatus, selectedPattern } =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions { gameStatus } =
+subscriptions { gameStatus, speed } =
     case gameStatus of
         Paused ->
             Sub.none
 
         Ticking ->
-            Time.every tickRate Tick
+            Time.every speed Tick
 
 
 fetchLiveCells : Model -> List Cell
@@ -198,6 +200,15 @@ buttonText gameStatus =
         Ticking ->
             "Stop Game"
 
+
+viewCells generation =
+    div
+        [ class "inner-field"
+        , style "position" "relative"
+        , style "width" "750px"
+        , style "height" "750px"
+        ]
+        (cellList generation (\id -> ClickCell id))
 
 
 -- Message handlers
@@ -288,5 +299,18 @@ handleRandomSeed model seed =
         , aliveCells = []
         , generation = seed |> Array.fromList |> randomFieldMatrix
       }
+    , Cmd.none
+    )
+
+
+handleSelectSpeed model speed =
+    let
+        numSpeed = case speed of
+            "slow" -> 200
+            "normal" -> 100
+            "fast" -> 10
+            _ -> 1
+    in
+    ( { model | speed = numSpeed }
     , Cmd.none
     )

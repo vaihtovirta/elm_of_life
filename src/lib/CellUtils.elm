@@ -3,9 +3,9 @@ module CellUtils exposing (cellList)
 import Array exposing (Array)
 import Matrix exposing (Matrix)
 import Msgs exposing (Msg(..))
-import Svg exposing (Svg, rect)
-import Svg.Attributes exposing (fill, height, stroke, width, x, y)
-import Svg.Events exposing (onClick)
+import Html exposing (Html, div, text)
+import Html.Attributes exposing (class, style)
+import Html.Events exposing (onClick)
 import Types exposing (Cell)
 
 
@@ -16,12 +16,12 @@ cellSize =
 
 cellSizeString : String
 cellSizeString =
-    "15"
+    "15px"
 
 
 rectPosition : Int -> String
 rectPosition value =
-    String.fromInt (value * cellSize)
+    String.fromInt (value * cellSize) ++ "px"
 
 
 fillColor : Bool -> String
@@ -34,21 +34,22 @@ fillColor alive =
             "#f9f8eb"
 
 
-cellRect : Cell -> (String -> msg) -> Svg msg
+cellRect : Cell -> (String -> msg) -> Html msg
 cellRect { posX, posY, alive, id } onClickHanlder =
-    rect
-        [ posX |> rectPosition |> x
-        , posY |> rectPosition |> y
-        , width cellSizeString
-        , height cellSizeString
-        , alive |> fillColor |> fill
-        , stroke "gainsboro"
-        , onClick (onClickHanlder id)
-        ]
-        []
+    div
+    [ style "background-color" (fillColor alive)
+    , style "border" "1px solid gainsboro"
+    , style "height" cellSizeString
+    , style "width" cellSizeString
+    , style "position" "absolute"
+    , style "top" (rectPosition posY)
+    , style "left" (rectPosition posX)
+    , onClick (onClickHanlder id)
+    ]
+    []
 
 
-cellList : Matrix Cell -> (String -> Msg) -> List (Svg Msg)
+cellList : Matrix Cell -> (String -> Msg) -> List (Html Msg)
 cellList generation onClickHanlder =
     generation
         |> Matrix.toArray
